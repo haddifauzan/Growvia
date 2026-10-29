@@ -28,7 +28,7 @@
 
 ---
 
-## 📌 Tentang Growvia
+## Tentang Growvia
 
 Indonesia menghadapi puncak bonus demografi (2030–2045) dengan lebih dari 64% populasi usia produktif. Namun, data BPS menunjukkan tingkat pengangguran terbuka lulusan universitas dan diploma masih tinggi, dipicu oleh **skill mismatch kronis** dan ketidakmampuan mahasiswa menerjemahkan pengalaman riil (organisasi, kepanitiaan, capstone, magang) menjadi bahasa kompetensi industri yang terukur.
 
@@ -43,7 +43,7 @@ Platform ini diajukan dalam ajang **Web Development Competition UINIC 8.0 (UIN S
 
 ---
 
-## ✨ Fitur Utama (Core Features)
+## Fitur Utama (Core Features)
 
 ```
 [Pengalaman Nyata] ➔ [AI Smart Extractor] ➔ [Skill Profile & Evidence]
@@ -59,34 +59,34 @@ Platform ini diajukan dalam ajang **Web Development Competition UINIC 8.0 (UIN S
                                         (/u/:portfolioSlug)
 ```
 
-### 1. 🧠 AI Smart Skill Extractor (Evidence-Based)
+### 1. AI Smart Skill Extractor (Evidence-Based)
 - Pengguna menuliskan pengalaman (organisasi, kepanitiaan, magang, proyek riset/capstone).
 - Mesin AI (Google Gemini) mengekstraksi keterampilan spesifik lengkap dengan kategori (*Technical, Soft, Tools, Methodologies*), tingkat penguasaan, dan skor relevansi.
 - Pengguna memiliki kendali penuh (*human-in-the-loop*): menerima, menolak, atau mengoreksi usulan AI.
 
-### 2. 📊 Visual Skill Map & Evidence Ledger
+### 2. Visual Skill Map & Evidence Ledger
 - Visualisasi profil kompetensi interaktif dengan radar chart dan pengelompokan taksonomi.
 - Setiap skill memiliki tautan bukti (*evidence ledger*) langsung ke pengalaman yang melatarbelakanginya, mengeliminasi fenomena *resume inflation*.
 
-### 3. 🎯 Career Readiness Engine & Gap Analysis
+### 3. Career Readiness Engine & Gap Analysis
 - Pemilihan target profesi (misal: *Frontend Engineer, Product Manager, Data Scientist*).
 - Sistem menghitung **Career Readiness Score (0–100%)** dan memetakan gap menjadi 3 status jelas:
   - 🟢 **Sudah Kuat (*Strong*)**
   - 🟡 **Perlu Dikembangkan (*Need Development*)**
   - 🔴 **Belum Ada (*Missing*)**
 
-### 4. 📚 Kurasi Rekomendasi Belajar Personal
+### 4. Kurasi Rekomendasi Belajar Personal
 - Modul pembelajaran (kursus, video, dokumentasi resmi, artikel) direkomendasikan secara tepat sasaran untuk menutup celah skill yang hilang (*missing skills*).
 - Simulasi dampak: melihat langsung kenaikan skor kesiapan karier sebelum dan sesudah modul diselesaikan.
 
-### 5. 💼 AI-Matched Career & Opportunity Hub
+### 5. AI-Matched Career & Opportunity Hub
 - Lowongan magang, kerja penuh waktu, freelance, dan kompetisi disajikan dengan persentase kecocokan (*match score*) transparan yang dihitung dari profil skill pengguna.
 
-### 6. 🌐 Instant Public Portfolio Builder (`/u/:slug`)
+### 6. Instant Public Portfolio Builder (`/u/:slug`)
 - Pembuatan laman portofolio profesional satu klik yang terhubung langsung ke profil skill dan pengalaman pengguna.
 - Dilengkapi pengaturan privasi publik/privat serta tombol salin link instan.
 
-### 7. 🛡️ Role-Based Admin & Governance Dashboard
+### 7. Role-Based Admin & Governance Dashboard
 - Panel administrasi untuk mengelola pengguna, kurasi peluang karier, moderasi katalog pembelajaran, audit sistem, dan fitur keamanan *soft-delete*.
 
 ---
@@ -108,7 +108,7 @@ Platform ini diajukan dalam ajang **Web Development Competition UINIC 8.0 (UIN S
 
 ---
 
-## 📂 Struktur Direktori Proyek
+## Struktur Direktori Proyek
 
 ```
 Growvia/
@@ -196,9 +196,13 @@ npm run dev
 ```
 Buka [http://localhost:3000](http://localhost:3000) pada browser Anda.
 
+Gunakan Akun Demo
+Email: demo@growvia.id
+Password: Password123!
+
 ---
 
-## 🔒 Keamanan & Praktik Rekayasa Perangkat Lunak
+## Keamanan & Praktik Rekayasa Perangkat Lunak
 
 - **Validasi Data Berlapis**: Seluruh request body divalidasi ketat pada level server menggunakan **Zod Schema**.
 - **Pencegahan Injeksi & XSS**: Prisma ORM menggunakan parameterization queries bawaan untuk mencegah SQL Injection; input teks disanitasi sebelum ditampilkan.
@@ -208,16 +212,11 @@ Buka [http://localhost:3000](http://localhost:3000) pada browser Anda.
 
 ---
 
-## 👥 Tim Pengembang (Growvia Team)
+## Tim Pengembang (Growvia Team)
 
 Karya ini dikembangkan oleh **Tim Growvia** untuk ajang **Web Development Competition UINIC 8.0 (2026)**:
-- **Ketua Tim / Lead Developer & Architect**: [Kokoirham47](https://github.com/Kokoirham47)
-- **Anggota Tim / UI/UX & Frontend Engineer**
-- **Anggota Tim / Backend & AI Engineer**
+- **Ketua Tim / Lead Developer & Architect**: Irham
+- **Anggota Tim / UI/UX & Frontend Engineer**: Najla
+- **Anggota Tim / Backend & AI Engineer**: Haddi
 
 ---
-
-<p align="center">
-  Dibuat dengan ❤️ untuk Masa Depan Talenta Digital Indonesia.<br>
-  <strong>&copy; 2026 Growvia. All Rights Reserved.</strong>
-</p>
