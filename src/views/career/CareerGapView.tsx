@@ -16,14 +16,33 @@ import GrowthRoadmap from './GrowthRoadmap'
 import ChangeTargetModal, { type CareerRoleOption } from './ChangeTargetModal'
 import LearningResourcesModal from './LearningResourcesModal'
 import SkillDetailModal from './SkillDetailModal'
+import CareerGapSkeleton from './CareerGapSkeleton'
+import { clientCache, CACHE_KEYS } from '@/libs/clientCache'
 import type { CareerTargetProfile, SkillChipItem, LearningResourceItem } from '@/types/career'
+
+interface CareerCacheData {
+  career: CareerTargetProfile | null
+  availableRoles: CareerRoleOption[]
+  learningResources: LearningResourceItem[]
+}
 
 export default function CareerGapView() {
   // Current active career profile from Supabase
-  const [career, setCareer] = useState<CareerTargetProfile | null>(null)
-  const [availableRoles, setAvailableRoles] = useState<CareerRoleOption[]>([])
-  const [learningResources, setLearningResources] = useState<LearningResourceItem[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const [career, setCareer] = useState<CareerTargetProfile | null>(() => {
+    const cached = clientCache.get<CareerCacheData>(CACHE_KEYS.CAREER_ACTIVE)
+    return cached?.career || null
+  })
+  const [availableRoles, setAvailableRoles] = useState<CareerRoleOption[]>(() => {
+    const cached = clientCache.get<CareerCacheData>(CACHE_KEYS.CAREER_ACTIVE)
+    return cached?.availableRoles || []
+  })
+  const [learningResources, setLearningResources] = useState<LearningResourceItem[]>(() => {
+    const cached = clientCache.get<CareerCacheData>(CACHE_KEYS.CAREER_ACTIVE)
+    return cached?.learningResources || []
+  })
+  const [isLoading, setIsLoading] = useState<boolean>(() => {
+    return !clientCache.has(CACHE_KEYS.CAREER_ACTIVE)
+  })
 
   // Modals state
   const [isChangeTargetOpen, setIsChangeTargetOpen] = useState(false)
@@ -40,9 +59,9 @@ export default function CareerGapView() {
   }
 
   // Fetch career gap data from Supabase backend via /api/career
-  const fetchCareerData = useCallback(async (roleId?: string) => {
+  const fetchCareerData = useCallback(async (roleId?: string, silent = false) => {
     try {
-      setIsLoading(true)
+      if (!silent) setIsLoading(true)
       const url = roleId ? `/api/career?roleId=${encodeURIComponent(roleId)}` : '/api/career'
       const res = await fetch(url)
 
@@ -57,20 +76,39 @@ export default function CareerGapView() {
       const json = await res.json()
 
       if (json.success && json.data) {
-        setCareer(json.data.career)
-        setAvailableRoles(json.data.availableRoles || [])
-        setLearningResources(json.data.learningResources || [])
+        const cacheData: CareerCacheData = {
+          career: json.data.career,
+          availableRoles: json.data.availableRoles || [],
+          learningResources: json.data.learningResources || []
+        }
+        setCareer(cacheData.career)
+        setAvailableRoles(cacheData.availableRoles)
+        setLearningResources(cacheData.learningResources)
+        if (!roleId) {
+          clientCache.set(CACHE_KEYS.CAREER_ACTIVE, cacheData)
+        }
       }
     } catch (err) {
       console.error('Gagal mengambil data analisis karier dari Database:', err)
-      showToast('Gagal memuat analisis karier dari Database.')
+      if (!silent) showToast('Gagal memuat analisis karier dari Database.')
     } finally {
-      setIsLoading(false)
+      if (!silent) setIsLoading(false)
     }
   }, [])
 
   useEffect(() => {
-    fetchCareerData()
+    const cached = clientCache.get<CareerCacheData>(CACHE_KEYS.CAREER_ACTIVE)
+    if (cached) {
+      setCareer(cached.career)
+      setAvailableRoles(cached.availableRoles)
+      setLearningResources(cached.learningResources)
+      setIsLoading(false)
+      if (clientCache.isStale(CACHE_KEYS.CAREER_ACTIVE)) {
+        fetchCareerData(undefined, true)
+      }
+    } else {
+      fetchCareerData(undefined, false)
+    }
   }, [fetchCareerData])
 
   // Handle career target switch via Supabase
@@ -87,8 +125,10 @@ export default function CareerGapView() {
       const json = await res.json()
 
       if (json.success && json.data?.career) {
+        clientCache.invalidate([CACHE_KEYS.CAREER_ACTIVE, CACHE_KEYS.DASHBOARD_SUMMARY, CACHE_KEYS.LEARNING])
         setCareer(json.data.career)
-        showToast(`🎉 Target karier dialihkan ke ${json.data.career.title}!`)
+        showToast(`🎉 Target karier dialihkan ke ${json.data.career.title}!`);
+        fetchCareerData(undefined, true)
       } else {
         showToast(`❌ ${json.message || 'Gagal mengubah target karier'}`)
       }
@@ -108,19 +148,7 @@ export default function CareerGapView() {
   }
 
   if (isLoading && !career) {
-    return (
-      <div className='flex flex-col items-center justify-center min-h-[500px] w-full gap-4 text-center'>
-        <Loader2 className='w-10 h-10 animate-spin text-blue-600' />
-        <div className='flex flex-col gap-1'>
-          <h3 className='text-base font-bold text-slate-800 dark:text-white'>
-            Menganalisis Kesiapan Karier Anda dari Database...
-          </h3>
-          <p className='text-xs text-slate-500'>
-            Menghitung bobot kesesuaian skill portofolio terhadap standar industri secara real-time.
-          </p>
-        </div>
-      </div>
-    )
+    return <CareerGapSkeleton />
   }
 
   if (!career) {

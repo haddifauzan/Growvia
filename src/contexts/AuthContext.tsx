@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import { clientCache } from '@/libs/clientCache'
 
 export interface UserSession {
   id: string
@@ -73,10 +74,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return
         }
       }
+      clientCache.clear()
       setUser(null)
       setProfile(null)
       setIsProfileComplete(false)
     } catch {
+      clientCache.clear()
       setUser(null)
       setProfile(null)
       setIsProfileComplete(false)
@@ -159,6 +162,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (e) {
       console.error('Logout error:', e)
     } finally {
+      clientCache.clear()
       setUser(null)
       setProfile(null)
       setIsProfileComplete(false)

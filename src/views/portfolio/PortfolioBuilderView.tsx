@@ -18,10 +18,13 @@ import type {
 import PortfolioEditorPanel from './PortfolioEditorPanel'
 import PortfolioLivePreviewFrame from './PortfolioLivePreviewFrame'
 import SharePortfolioModal from './SharePortfolioModal'
+import PortfolioSkeleton from './PortfolioSkeleton'
+import { clientCache, CACHE_KEYS } from '@/libs/clientCache'
 
 export default function PortfolioBuilderView() {
-  const [data, setData] = useState<PublicPortfolioData | null>(null)
-  const [isLoading, setIsLoading] = useState<boolean>(true)
+  const cachedInitial = clientCache.get<PublicPortfolioData>(CACHE_KEYS.PORTFOLIO)
+  const [data, setData] = useState<PublicPortfolioData | null>(cachedInitial)
+  const [isLoading, setIsLoading] = useState<boolean>(!cachedInitial)
   const [isSaving, setIsSaving] = useState<boolean>(false)
   const [toastMessage, setToastMessage] = useState<string | null>(null)
 
@@ -29,13 +32,13 @@ export default function PortfolioBuilderView() {
   const [mobileTab, setMobileTab] = useState<'editor' | 'preview'>('editor')
 
   // Controlled states for builder settings
-  const [isPublished, setIsPublished] = useState<boolean>(false)
-  const [slug, setSlug] = useState<string>('')
-  const [headline, setHeadline] = useState<string>('')
-  const [bio, setBio] = useState<string>('')
-  const [selectedTheme, setSelectedTheme] = useState<PortfolioTheme>('royal-blue')
+  const [isPublished, setIsPublished] = useState<boolean>(Boolean(cachedInitial?.profile.portfolioPublished))
+  const [slug, setSlug] = useState<string>(cachedInitial?.profile.portfolioSlug || '')
+  const [headline, setHeadline] = useState<string>(cachedInitial?.profile.headline || '')
+  const [bio, setBio] = useState<string>(cachedInitial?.profile.bio || '')
+  const [selectedTheme, setSelectedTheme] = useState<PortfolioTheme>(cachedInitial?.theme || 'royal-blue')
 
-  const [sections, setSections] = useState<PortfolioSectionVisibility>({
+  const [sections, setSections] = useState<PortfolioSectionVisibility>(cachedInitial?.sections || {
     work: true,
     projects: true,
     organisations: true,
@@ -54,9 +57,9 @@ export default function PortfolioBuilderView() {
   }, [])
 
   // 1. Fetch initial portfolio preview data
-  const fetchPreviewData = useCallback(async () => {
+  const fetchPreviewData = useCallback(async (silent = false) => {
     try {
-      setIsLoading(true)
+      if (!silent) setIsLoading(true)
       const res = await fetch('/api/portfolio/preview')
       const json: PortfolioPreviewResponse = await res.json()
 
@@ -67,6 +70,7 @@ export default function PortfolioBuilderView() {
       const pData = json.data
 
       setData(pData)
+      clientCache.set(CACHE_KEYS.PORTFOLIO, pData)
 
       // Initialize form fields
       setIsPublished(Boolean(pData.profile.portfolioPublished))
@@ -77,14 +81,29 @@ export default function PortfolioBuilderView() {
       if (pData.sections) setSections(pData.sections)
     } catch (err: any) {
       console.error('Error fetching portfolio preview:', err)
-      showToast('❌ Gagal memuat data portofolio. Coba lagi.')
+      if (!silent) showToast('❌ Gagal memuat data portofolio. Coba lagi.')
     } finally {
-      setIsLoading(false)
+      if (!silent) setIsLoading(false)
     }
   }, [showToast])
 
   useEffect(() => {
-    fetchPreviewData()
+    const cached = clientCache.get<PublicPortfolioData>(CACHE_KEYS.PORTFOLIO)
+    if (cached) {
+      setData(cached)
+      setIsPublished(Boolean(cached.profile.portfolioPublished))
+      setSlug(cached.profile.portfolioSlug || '')
+      setHeadline(cached.profile.headline || '')
+      setBio(cached.profile.bio || '')
+      if (cached.theme) setSelectedTheme(cached.theme)
+      if (cached.sections) setSections(cached.sections)
+      setIsLoading(false)
+      if (clientCache.isStale(CACHE_KEYS.PORTFOLIO)) {
+        fetchPreviewData(true)
+      }
+    } else {
+      fetchPreviewData(false)
+    }
   }, [fetchPreviewData])
 
   // 2. Toggle Section Visibility
@@ -142,6 +161,7 @@ export default function PortfolioBuilderView() {
         setIsPublished(overridePublish)
       }
 
+      clientCache.invalidate([CACHE_KEYS.PORTFOLIO, CACHE_KEYS.DASHBOARD_SUMMARY])
       // Update local state copy
       if (data) {
         setData({
@@ -174,19 +194,9 @@ export default function PortfolioBuilderView() {
   }
 
   if (isLoading || !data) {
-    return (
-      <div className='flex flex-col items-center justify-center min-h-[500px] w-full gap-3 font-["Poppins",sans-serif]'>
-        <div className='w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center animate-spin'>
-          <Loader2 className='w-6 h-6' />
-        </div>
-        <span className='text-sm font-semibold text-slate-500 dark:text-slate-400'>
-          Mengompilasi data portofolio digital berbasis bukti...
-        </span>
-      </div>
-    )
+    return <PortfolioSkeleton />
   }
 
-  // Live preview data object
   const previewData: PublicPortfolioData = {
     ...data,
     profile: {

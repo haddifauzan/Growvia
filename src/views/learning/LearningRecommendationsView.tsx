@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 
 import LearningHeader from './LearningHeader'
+import { clientCache, CACHE_KEYS } from '@/libs/clientCache'
 import FeaturedRecommendationCard from './FeaturedRecommendationCard'
 import LearningFilterBar from './LearningFilterBar'
 import LearningCard from './LearningCard'
@@ -100,9 +101,9 @@ export default function LearningRecommendationsView() {
   }
 
   // Fetch learning data from Supabase
-  const fetchLearningData = useCallback(async () => {
+  const fetchLearningData = useCallback(async (silent = false) => {
     try {
-      setIsLoading(true)
+      if (!silent) setIsLoading(true)
       setError(null)
 
       const res = await fetch('/api/learning')
@@ -119,16 +120,30 @@ export default function LearningRecommendationsView() {
       setBookmarkedIds(data.bookmarkedIds || [])
       if (data.header) setHeaderData(data.header)
       if (data.impact) setImpactData(data.impact)
+      clientCache.set(CACHE_KEYS.LEARNING, data)
     } catch (err: unknown) {
       console.error('Failed to load learning data from Supabase:', err)
-      setError(err instanceof Error ? err.message : 'Terjadi kesalahan saat memuat data.')
+      if (!silent) setError(err instanceof Error ? err.message : 'Terjadi kesalahan saat memuat data.')
     } finally {
-      setIsLoading(false)
+      if (!silent) setIsLoading(false)
     }
   }, [])
 
   useEffect(() => {
-    fetchLearningData()
+    const cached = clientCache.get<LearningApiResponse>(CACHE_KEYS.LEARNING)
+    if (cached) {
+      setFeaturedResource(cached.featuredResource)
+      setResources(cached.resources || [])
+      setBookmarkedIds(cached.bookmarkedIds || [])
+      if (cached.header) setHeaderData(cached.header)
+      if (cached.impact) setImpactData(cached.impact)
+      setIsLoading(false)
+      if (clientCache.isStale(CACHE_KEYS.LEARNING)) {
+        fetchLearningData(true)
+      }
+    } else {
+      fetchLearningData(false)
+    }
   }, [fetchLearningData])
 
   // Handle Bookmark Toggle with optimistic update & Supabase sync
@@ -144,6 +159,14 @@ export default function LearningRecommendationsView() {
       ...prev,
       selectedModulesCount: nextBookmarked.length
     }))
+    const cached = clientCache.get<LearningApiResponse>(CACHE_KEYS.LEARNING)
+    if (cached) {
+      clientCache.set(CACHE_KEYS.LEARNING, {
+        ...cached,
+        bookmarkedIds: nextBookmarked,
+        header: cached.header ? { ...cached.header, selectedModulesCount: nextBookmarked.length } : cached.header
+      })
+    }
 
     try {
       const res = await fetch('/api/learning', {
@@ -313,7 +336,7 @@ export default function LearningRecommendationsView() {
           </p>
           <button
             type='button'
-            onClick={fetchLearningData}
+            onClick={() => fetchLearningData()}
             className='inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 transition-colors cursor-pointer mt-1'
           >
             <RotateCcw className='w-3.5 h-3.5' />

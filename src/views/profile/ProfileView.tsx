@@ -21,6 +21,7 @@ import {
 } from 'lucide-react'
 
 import { useAuth } from '@/contexts/AuthContext'
+import { clientCache, CACHE_KEYS } from '@/libs/clientCache'
 import { INDONESIAN_UNIVERSITIES, INDONESIAN_MAJORS } from '@/data/indonesianEducation'
 import SearchableSelect from '@/components/ui/SearchableSelect'
 
@@ -104,6 +105,7 @@ export default function ProfileView() {
       }
 
       setAvatarUrl(json.data.avatarUrl)
+      clientCache.invalidate([CACHE_KEYS.DASHBOARD_SUMMARY, CACHE_KEYS.PORTFOLIO])
       await refreshUser()
       showToast('success', 'Foto profil berhasil diunggah!')
     } catch (err: any) {
@@ -129,6 +131,7 @@ export default function ProfileView() {
       }
 
       setAvatarUrl('')
+      clientCache.invalidate([CACHE_KEYS.DASHBOARD_SUMMARY, CACHE_KEYS.PORTFOLIO])
       await refreshUser()
       showToast('success', 'Foto profil berhasil dihapus, kembali menggunakan inisial.')
     } catch (err: any) {
@@ -190,6 +193,7 @@ return
         throw new Error(json.message || 'Gagal menyimpan profil')
       }
 
+      clientCache.invalidate([CACHE_KEYS.DASHBOARD_SUMMARY, CACHE_KEYS.PORTFOLIO])
       await refreshUser()
       showToast('success', 'Profil Anda berhasil diperbarui!')
     } catch (err: any) {

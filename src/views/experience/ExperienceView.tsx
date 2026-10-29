@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
+import { clientCache, CACHE_KEYS } from '@/libs/clientCache'
 
 import {
   Briefcase,
@@ -65,9 +66,17 @@ function getPaginationRange(currentPage: number, totalPages: number): (number | 
 }
 
 export default function ExperienceView() {
-  const [experiences, setExperiences] = useState<ExperienceItem[]>([])
-  const [stats, setStats] = useState<ExperienceStats | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [experiences, setExperiences] = useState<ExperienceItem[]>(() => {
+    const cached = clientCache.get<{ experiences: ExperienceItem[]; stats: ExperienceStats | null }>(CACHE_KEYS.EXPERIENCES)
+    return cached?.experiences || []
+  })
+  const [stats, setStats] = useState<ExperienceStats | null>(() => {
+    const cached = clientCache.get<{ experiences: ExperienceItem[]; stats: ExperienceStats | null }>(CACHE_KEYS.EXPERIENCES)
+    return cached?.stats || null
+  })
+  const [loading, setLoading] = useState<boolean>(() => {
+    return !clientCache.has(CACHE_KEYS.EXPERIENCES)
+  })
   const [error, setError] = useState<string | null>(null)
 
   // Filters & Search
@@ -124,13 +133,19 @@ return () => window.removeEventListener('resize', handleResize)
   }
 
   const handleAiReviewSuccess = (savedCount: number) => {
-    fetchExperiences()
+    clientCache.invalidate([
+      CACHE_KEYS.EXPERIENCES,
+      CACHE_KEYS.SKILLS,
+      CACHE_KEYS.DASHBOARD_SUMMARY,
+      CACHE_KEYS.CAREER_ACTIVE
+    ])
+    fetchExperiences(true)
     setToastMessage(`🎉 Berhasil memvalidasi ${savedCount} skill baru ke profil Anda!`)
   }
 
   // Fetch experiences from API
-  const fetchExperiences = useCallback(async () => {
-    setLoading(true)
+  const fetchExperiences = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true)
     setError(null)
 
     try {
@@ -141,18 +156,33 @@ return () => window.removeEventListener('resize', handleResize)
         throw new Error(json.message || 'Gagal memuat daftar pengalaman')
       }
 
-      setExperiences(json.data.experiences || [])
-      setStats(json.data.stats || null)
+      const expList = json.data.experiences || []
+      const expStats = json.data.stats || null
+      setExperiences(expList)
+      setStats(expStats)
+      clientCache.set(CACHE_KEYS.EXPERIENCES, { experiences: expList, stats: expStats })
     } catch (err: any) {
       console.error('Fetch experiences error:', err)
-      setError(err.message || 'Terjadi kesalahan saat mengambil data pengalaman')
+      if (!silent) {
+        setError(err.message || 'Terjadi kesalahan saat mengambil data pengalaman')
+      }
     } finally {
-      setLoading(false)
+      if (!silent) setLoading(false)
     }
   }, [])
 
   useEffect(() => {
-    fetchExperiences()
+    const cached = clientCache.get<{ experiences: ExperienceItem[]; stats: ExperienceStats | null }>(CACHE_KEYS.EXPERIENCES)
+    if (cached) {
+      setExperiences(cached.experiences)
+      setStats(cached.stats)
+      setLoading(false)
+      if (clientCache.isStale(CACHE_KEYS.EXPERIENCES)) {
+        fetchExperiences(true)
+      }
+    } else {
+      fetchExperiences(false)
+    }
   }, [fetchExperiences])
 
   // Toast auto-dismiss
@@ -246,7 +276,13 @@ return filteredExperiences.slice(start, start + itemsPerPage)
   }
 
   const handleFormSuccess = (savedExp: ExperienceItem, isEdit: boolean) => {
-    fetchExperiences()
+    clientCache.invalidate([
+      CACHE_KEYS.EXPERIENCES,
+      CACHE_KEYS.DASHBOARD_SUMMARY,
+      CACHE_KEYS.SKILLS,
+      CACHE_KEYS.CAREER_ACTIVE
+    ])
+    fetchExperiences(true)
     setToastMessage(
       isEdit
         ? `Pengalaman "${savedExp.title}" berhasil diperbarui.`
@@ -261,7 +297,13 @@ return filteredExperiences.slice(start, start + itemsPerPage)
   }
 
   const handleDeleteSuccess = () => {
-    fetchExperiences()
+    clientCache.invalidate([
+      CACHE_KEYS.EXPERIENCES,
+      CACHE_KEYS.DASHBOARD_SUMMARY,
+      CACHE_KEYS.SKILLS,
+      CACHE_KEYS.CAREER_ACTIVE
+    ])
+    fetchExperiences(true)
     setToastMessage('Pengalaman berhasil dihapus.')
   }
 
@@ -524,7 +566,7 @@ return dominantKey ? EXPERIENCE_TYPE_CONFIG[dominantKey]?.label : '-'
           </p>
           <button
             type='button'
-            onClick={fetchExperiences}
+            onClick={() => fetchExperiences()}
             className='inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-rose-600 text-white hover:bg-rose-700 transition-colors cursor-pointer'
           >
             <RotateCcw className='w-3.5 h-3.5' />

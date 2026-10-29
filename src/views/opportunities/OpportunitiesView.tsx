@@ -16,12 +16,18 @@ import OpportunityCard from './OpportunityCard'
 import OpportunityDetailModal from './OpportunityDetailModal'
 import SavedOpportunitiesModal from './SavedOpportunitiesModal'
 import OpportunitiesEmptyState from './OpportunitiesEmptyState'
+import { clientCache, CACHE_KEYS } from '@/libs/clientCache'
 
 const ITEMS_PER_PAGE = 6
 
 export default function OpportunitiesView() {
-  const [opportunities, setOpportunities] = useState<OpportunityItem[]>([])
-  const [isLoading, setIsLoading] = useState<boolean>(true)
+  const defaultKey = `${CACHE_KEYS.OPPORTUNITIES}_all__match_desc`
+  const [opportunities, setOpportunities] = useState<OpportunityItem[]>(() => {
+    return clientCache.get<OpportunityItem[]>(defaultKey) || []
+  })
+  const [isLoading, setIsLoading] = useState<boolean>(() => {
+    return !clientCache.has(defaultKey)
+  })
   const [error, setError] = useState<string | null>(null)
   const [toastMessage, setToastMessage] = useState<string | null>(null)
 
@@ -53,9 +59,10 @@ export default function OpportunitiesView() {
   }, [])
 
   // Fetch opportunities from API
-  const fetchOpportunities = useCallback(async () => {
+  const fetchOpportunities = useCallback(async (silent = false) => {
+    const currentKey = `${CACHE_KEYS.OPPORTUNITIES}_${filters.type}_${filters.location}_${filters.sort}`
     try {
-      setIsLoading(true)
+      if (!silent) setIsLoading(true)
       setError(null)
 
       const queryParams = new URLSearchParams()
@@ -79,18 +86,30 @@ export default function OpportunitiesView() {
         throw new Error(data.message || 'Gagal memuat daftar peluang karier')
       }
 
-      setOpportunities(data.data || [])
+      const list = data.data || []
+      setOpportunities(list)
+      clientCache.set(currentKey, list)
     } catch (err: any) {
       console.error('Error fetching opportunities:', err)
-      setError(err.message || 'Terjadi kesalahan pada sistem saat memuat data')
+      if (!silent) setError(err.message || 'Terjadi kesalahan pada sistem saat memuat data')
     } finally {
-      setIsLoading(false)
+      if (!silent) setIsLoading(false)
     }
   }, [filters.type, filters.location, filters.sort])
 
   useEffect(() => {
-    fetchOpportunities()
-  }, [fetchOpportunities])
+    const currentKey = `${CACHE_KEYS.OPPORTUNITIES}_${filters.type}_${filters.location}_${filters.sort}`
+    const cached = clientCache.get<OpportunityItem[]>(currentKey)
+    if (cached) {
+      setOpportunities(cached)
+      setIsLoading(false)
+      if (clientCache.isStale(currentKey)) {
+        fetchOpportunities(true)
+      }
+    } else {
+      fetchOpportunities(false)
+    }
+  }, [fetchOpportunities, filters.type, filters.location, filters.sort])
 
   // Reset pagination ke halaman 1 saat filter atau pencarian berubah
   useEffect(() => {
@@ -280,7 +299,7 @@ return next
           </div>
           <button
             type='button'
-            onClick={fetchOpportunities}
+            onClick={() => fetchOpportunities()}
             className='underline font-semibold cursor-pointer'
           >
             Coba Lagi

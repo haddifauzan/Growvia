@@ -3,6 +3,7 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react'
 
 import Link from 'next/link'
+import { clientCache, CACHE_KEYS } from '@/libs/clientCache'
 
 import {
   Sparkles,
@@ -130,9 +131,17 @@ export default function SkillProfileView() {
   const [activeTab, setActiveTab] = useState<'overview' | 'skill_map' | 'evidence'>('overview')
 
   // Live Skills & Evidences State from Supabase
-  const [skills, setSkills] = useState<SkillItem[]>([])
-  const [evidences, setEvidences] = useState<EvidenceDetail[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const [skills, setSkills] = useState<SkillItem[]>(() => {
+    const cached = clientCache.get<{ skills: SkillItem[]; evidences: EvidenceDetail[] }>(CACHE_KEYS.SKILLS)
+    return cached?.skills || []
+  })
+  const [evidences, setEvidences] = useState<EvidenceDetail[]>(() => {
+    const cached = clientCache.get<{ skills: SkillItem[]; evidences: EvidenceDetail[] }>(CACHE_KEYS.SKILLS)
+    return cached?.evidences || []
+  })
+  const [isLoading, setIsLoading] = useState<boolean>(() => {
+    return !clientCache.has(CACHE_KEYS.SKILLS)
+  })
   const [activeCategoryFilter, setActiveCategoryFilter] = useState<SkillCategoryType | 'all'>('all')
   const [searchQuery, setSearchQuery] = useState('')
 
@@ -179,9 +188,9 @@ export default function SkillProfileView() {
   }
 
   // Fetch skills & evidences from Supabase database via /api/skills
-  const fetchSkills = useCallback(async () => {
+  const fetchSkills = useCallback(async (silent = false) => {
     try {
-      setIsLoading(true)
+      if (!silent) setIsLoading(true)
       const res = await fetch('/api/skills')
 
       if (!res.ok) {
@@ -195,19 +204,32 @@ export default function SkillProfileView() {
       const json = await res.json()
 
       if (json.success && json.data) {
-        setSkills(json.data.skills || [])
-        setEvidences(json.data.evidences || [])
+        const skillList = json.data.skills || []
+        const evidenceList = json.data.evidences || []
+        setSkills(skillList)
+        setEvidences(evidenceList)
+        clientCache.set(CACHE_KEYS.SKILLS, { skills: skillList, evidences: evidenceList })
       }
     } catch (err) {
       console.error('Gagal mengambil data skill dari database Supabase:', err)
-      showToast('Gagal memuat data skill dari Supabase.')
+      if (!silent) showToast('Gagal memuat data skill dari Supabase.')
     } finally {
-      setIsLoading(false)
+      if (!silent) setIsLoading(false)
     }
   }, [])
 
   useEffect(() => {
-    fetchSkills()
+    const cached = clientCache.get<{ skills: SkillItem[]; evidences: EvidenceDetail[] }>(CACHE_KEYS.SKILLS)
+    if (cached) {
+      setSkills(cached.skills)
+      setEvidences(cached.evidences)
+      setIsLoading(false)
+      if (clientCache.isStale(CACHE_KEYS.SKILLS)) {
+        fetchSkills(true)
+      }
+    } else {
+      fetchSkills(false)
+    }
   }, [fetchSkills])
 
 
@@ -416,6 +438,7 @@ export default function SkillProfileView() {
       const json = await res.json()
 
       if (json.success && json.data) {
+        clientCache.invalidate([CACHE_KEYS.SKILLS, CACHE_KEYS.DASHBOARD_SUMMARY, CACHE_KEYS.CAREER_ACTIVE])
         setSkills(prev => [json.data, ...prev])
         showToast(`🎉 Berhasil menyimpan skill "${json.data.name}"!`)
       } else {
@@ -461,6 +484,7 @@ export default function SkillProfileView() {
       const json = await res.json()
 
       if (json.success && json.data) {
+        clientCache.invalidate([CACHE_KEYS.SKILLS, CACHE_KEYS.DASHBOARD_SUMMARY, CACHE_KEYS.CAREER_ACTIVE])
         setSkills(prev => prev.map(s => (s.id === updated.id ? json.data : s)))
         showToast(`✅ Skill "${updated.name}" berhasil diperbarui di Supabase.`)
       } else {
@@ -481,6 +505,7 @@ export default function SkillProfileView() {
 
   // Handler: Successfully deleted from modal
   const handleDeleteSuccess = (deletedId: string, skillName: string) => {
+    clientCache.invalidate([CACHE_KEYS.SKILLS, CACHE_KEYS.DASHBOARD_SUMMARY, CACHE_KEYS.CAREER_ACTIVE])
     setSkills(prev => prev.filter(s => s.id !== deletedId))
     setEvidences(prev => prev.filter(e => e.skillId !== deletedId))
     showToast(`🗑️ Skill "${skillName}" berhasil dihapus dari profil.`)
@@ -496,6 +521,7 @@ export default function SkillProfileView() {
       const json = await res.json()
 
       if (json.success) {
+        clientCache.invalidate([CACHE_KEYS.SKILLS, CACHE_KEYS.DASHBOARD_SUMMARY, CACHE_KEYS.CAREER_ACTIVE])
         setSkills(prev => prev.filter(s => s.id !== skillId))
         setEvidences(prev => prev.filter(e => e.skillId !== skillId))
         showToast('🗑️ Skill berhasil dihapus dari Supabase.')
@@ -540,7 +566,7 @@ export default function SkillProfileView() {
         <div className='flex items-center gap-2.5 shrink-0'>
           <button
             type='button'
-            onClick={fetchSkills}
+            onClick={() => fetchSkills()}
             disabled={isLoading}
             className='inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/60 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-xs sm:text-sm font-semibold transition-all shadow-xs cursor-pointer disabled:opacity-50'
             title='Muat Ulang dari Supabase'
