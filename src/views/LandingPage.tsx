@@ -554,11 +554,14 @@ export default function LandingPage({ mode }: LandingPageProps = {}) {
             </button>
             <Link
               href='/login'
-              className={`hidden rounded-full px-3 py-2 text-sm font-medium text-[var(--lp-text)] hover:text-[var(--lp-link)] sm:block ${focusRing}`}
+              className={`hidden rounded-full px-3 py-2 text-sm font-medium text-[var(--lp-text)] hover:text-[var(--lp-link)] md:block ${focusRing}`}
             >
               Masuk
             </Link>
-            <Link href='/register' className={`${btnOutline} hidden !px-5 !py-2 sm:inline-flex`}>
+            <Link
+              href='/register'
+              className={`hidden md:inline-flex items-center justify-center gap-2 rounded-full border border-[var(--lp-border-strong)] bg-transparent !px-5 !py-2 text-sm font-medium text-[var(--lp-heading)] transition hover:bg-[var(--lp-panel)] active:translate-y-px ${focusRing}`}
+            >
               Daftar gratis
             </Link>
             <button
