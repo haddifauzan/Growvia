@@ -9,6 +9,7 @@ import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 
 import DashboardSkeleton from './DashboardSkeleton'
+import ExperienceFormModal from '@/views/experience/ExperienceFormModal'
 
 import { clientCache, CACHE_KEYS } from '@/libs/clientCache'
 
@@ -358,25 +359,8 @@ export default function DashboardView({ initialData = null }: DashboardViewProps
 
 
 
-  // Quick Add Experience Modal
-
+  // Experience Form Modal (Unified Modal with full date & role inputs)
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false)
-
-  const [isSubmittingExp, setIsSubmittingExp] = useState(false)
-
-
-
-  const [expForm, setExpForm] = useState({
-
-    title: '',
-
-    institutionName: '',
-
-    type: 'internship',
-
-    description: ''
-
-  })
 
 
 
@@ -466,103 +450,7 @@ export default function DashboardView({ initialData = null }: DashboardViewProps
 
 
 
-  const handleQuickAddSubmit = async (e: React.FormEvent) => {
-
-    e.preventDefault()
-
-
-
-    if (!expForm.title || !expForm.institutionName) return
-
-
-
-    try {
-
-      setIsSubmittingExp(true)
-
-
-
-      const res = await fetch('/api/experiences', {
-
-        method: 'POST',
-
-        headers: { 'Content-Type': 'application/json' },
-
-        body: JSON.stringify({
-
-          title: expForm.title,
-
-          role: expForm.title,
-
-          institutionName: expForm.institutionName,
-
-          type: expForm.type,
-
-          startDate: new Date().toISOString(),
-
-          isOngoing: true,
-
-          description: expForm.description
-
-        })
-
-      })
-
-
-
-      if (res.ok) {
-
-        setIsQuickAddOpen(false)
-
-        setExpForm({
-
-          title: '',
-
-          institutionName: '',
-
-          type: 'internship',
-
-          description: ''
-
-        })
-
-        clientCache.invalidate([
-
-          CACHE_KEYS.DASHBOARD_SUMMARY,
-
-          CACHE_KEYS.EXPERIENCES,
-
-          CACHE_KEYS.SKILLS,
-
-          CACHE_KEYS.CAREER_ACTIVE
-
-        ])
-
-        await fetchDashboardData(true)
-
-      } else {
-
-        const errJson = await res.json()
-
-
-
-        alert(errJson.message || 'Gagal menyimpan pengalaman ke Supabase.')
-
-      }
-
-    } catch (err) {
-
-      console.error('Error quick adding experience:', err)
-
-      alert('Terjadi kesalahan koneksi ke Supabase.')
-
-    } finally {
-
-      setIsSubmittingExp(false)
-
-    }
-
-  }
+  
 
 
 
@@ -2630,209 +2518,20 @@ export default function DashboardView({ initialData = null }: DashboardViewProps
 
 
 
-      {/* QUICK ADD EXPERIENCE MODAL */}
-
-      {isQuickAddOpen && (
-
-        <div className='fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-in fade-in duration-200'>
-
-          <div className='bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl w-full max-w-md p-6 overflow-hidden'>
-
-            <div className='flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800'>
-
-              <h4 className='text-base font-bold text-slate-900 dark:text-white'>
-
-                Tambah Pengalaman Baru
-
-              </h4>
-
-              <button
-
-                type='button'
-
-                onClick={() => setIsQuickAddOpen(false)}
-
-                className='text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg p-1 cursor-pointer'
-
-              >
-
-                <X className='w-5 h-5' />
-
-              </button>
-
-            </div>
-
-
-
-            <form onSubmit={handleQuickAddSubmit} className='flex flex-col gap-3.5 mt-4'>
-
-              <div>
-
-                <label className='text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1'>
-
-                  Judul Pengalaman / Posisi
-
-                </label>
-
-                <input
-
-                  type='text'
-
-                  required
-
-                  placeholder='cth: Product Design Intern'
-
-                  value={expForm.title}
-
-                  onChange={e => setExpForm({ ...expForm, title: e.target.value })}
-
-                  className='w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:border-blue-600'
-
-                />
-
-              </div>
-
-
-
-              <div>
-
-                <label className='text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1'>
-
-                  Institusi / Perusahaan
-
-                </label>
-
-                <input
-
-                  type='text'
-
-                  required
-
-                  placeholder='cth: GoTo Financial'
-
-                  value={expForm.institutionName}
-
-                  onChange={e => setExpForm({ ...expForm, institutionName: e.target.value })}
-
-                  className='w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:border-blue-600'
-
-                />
-
-              </div>
-
-
-
-              <div>
-
-                <label className='text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1'>
-
-                  Tipe Pengalaman
-
-                </label>
-
-                <select
-
-                  value={expForm.type}
-
-                  onChange={e => setExpForm({ ...expForm, type: e.target.value })}
-
-                  className='w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:border-blue-600'
-
-                >
-
-                  <option value='internship'>Magang Industri</option>
-
-                  <option value='organisation'>Organisasi Kampus</option>
-
-                  <option value='project'>Proyek Independen</option>
-
-                  <option value='competition'>Kompetisi</option>
-
-                  <option value='committee'>Kepanitiaan</option>
-
-                </select>
-
-              </div>
-
-
-
-              <div>
-
-                <label className='text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1'>
-
-                  Deskripsi / Tanggung Jawab Singkat
-
-                </label>
-
-                <textarea
-
-                  rows={3}
-
-                  placeholder='Ceritakan ringkas apa yang kamu kerjakan...'
-
-                  value={expForm.description}
-
-                  onChange={e => setExpForm({ ...expForm, description: e.target.value })}
-
-                  className='w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:border-blue-600'
-
-                />
-
-              </div>
-
-
-
-              <div className='flex items-center justify-end gap-2.5 mt-2 pt-2 border-t border-slate-100 dark:border-slate-800'>
-
-                <button
-
-                  type='button'
-
-                  onClick={() => setIsQuickAddOpen(false)}
-
-                  className='px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer'
-
-                >
-
-                  Batal
-
-                </button>
-
-
-
-                <button
-
-                  type='submit'
-
-                  disabled={isSubmittingExp}
-
-                  className='inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold transition-all cursor-pointer'
-
-                >
-
-                  {isSubmittingExp ? (
-
-                    <Loader2 className='w-3.5 h-3.5 animate-spin' />
-
-                  ) : (
-
-                    <Plus className='w-3.5 h-3.5' />
-
-                  )}
-
-                  <span>Simpan Pengalaman</span>
-
-                </button>
-
-              </div>
-
-            </form>
-
-          </div>
-
-        </div>
-
-      )}
+      {/* Experience Form Modal (Unified Experience Modal with Date & AI Extraction) */}
+      <ExperienceFormModal
+        isOpen={isQuickAddOpen}
+        onClose={() => setIsQuickAddOpen(false)}
+        onSuccess={async () => {
+          clientCache.invalidate([
+            CACHE_KEYS.DASHBOARD_SUMMARY,
+            CACHE_KEYS.EXPERIENCES,
+            CACHE_KEYS.SKILLS,
+            CACHE_KEYS.CAREER_ACTIVE
+          ])
+          await fetchDashboardData(true)
+        }}
+      />
 
     </div>
 

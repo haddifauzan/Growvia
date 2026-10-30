@@ -131,11 +131,21 @@ const INDO_MONTHS = [
 
 export function formatMonthYear(dateString: string | null | undefined): string {
   if (!dateString) return ''
-  const d = new Date(dateString)
 
+  // If formatted as YYYY-MM-DD or ISO string, extract YYYY and MM directly to prevent timezone shift
+  const match = String(dateString).match(/^(\d{4})-(\d{2})/)
+  if (match) {
+    const year = parseInt(match[1], 10)
+    const monthIdx = parseInt(match[2], 10) - 1
+    if (monthIdx >= 0 && monthIdx < 12) {
+      return `${INDO_MONTHS[monthIdx]} ${year}`
+    }
+  }
+
+  const d = new Date(dateString)
   if (isNaN(d.getTime())) return dateString
-  
-return `${INDO_MONTHS[d.getMonth()]} ${d.getFullYear()}`
+
+  return `${INDO_MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`
 }
 
 export function formatExperiencePeriod(
