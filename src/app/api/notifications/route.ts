@@ -31,44 +31,6 @@ export async function GET(req: Request) {
       return apiError('Tidak terautentikasi', 401)
     }
 
-    // Check if user has notifications, otherwise create default welcome notifications
-    const count = await prisma.notification.count({
-      where: { userId }
-    })
-
-    if (count === 0) {
-      await prisma.notification.createMany({
-        data: [
-          {
-            userId,
-            type: 'career_opportunity',
-            title: 'Rekomendasi Lowongan: Frontend Engineer di Tech Unicorn',
-            body: 'Kecocokan kompetensi kamu mencapai 92%. Segera tinjau lowongan dan lamar sekarang.',
-            actionUrl: '/opportunities',
-            isRead: false
-          },
-          {
-            userId,
-            type: 'skill_update',
-            title: 'Skill Baru Terverifikasi oleh AI',
-            body: 'Pengalaman proyekmu telah mengekstraksi skill TypeScript dan React secara otomatis.',
-            actionUrl: '/skills',
-            isRead: true,
-            readAt: new Date(Date.now() - 3600000)
-          },
-          {
-            userId,
-            type: 'learning_reminder',
-            title: 'Tingkatkan Kesiapan Karier ke 90%+',
-            body: 'Pelajari modul DevOps dan Containerization untuk menutup kesenjangan kompetensi sasaran.',
-            actionUrl: '/learning',
-            isRead: true,
-            readAt: new Date(Date.now() - 86400000)
-          }
-        ]
-      })
-    }
-
     const notifications = await prisma.notification.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },
